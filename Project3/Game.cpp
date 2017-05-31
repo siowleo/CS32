@@ -24,23 +24,20 @@ public:
 	string shipName(int shipId) const;
 	Player* play(Player* p1, Player* p2, Board& b1, Board& b2, bool shouldPause, int round);
 
-
 private:
-	int m_nRows;
-	int m_nCols;
-	int m_length;
-	int m_nShips;
+
 	struct Ship
 	{
-		int length;
-		string name;
-		char symbol;
-
+		int m_length;
+		string m_name;
+		char m_symbol;
 	};
+
+	int m_nRows;            
+	int m_nCols;            
+	int m_nShips;       
 	vector<Ship> ships;
-
 };
-
 
 void waitForEnter()
 {
@@ -48,19 +45,22 @@ void waitForEnter()
 	cin.ignore(10000, '\n');
 }
 
-GameImpl::GameImpl(int nRows, int nCols)
+// Function Implementation
+///////////////////////////////////////////////////////////
+
+GameImpl::GameImpl(int nRows, int nCols) 
 {
-	m_nRows = nRows;
+	m_nRows = nRows; //copy constructor for private members
 	m_nCols = nCols;
 	m_nShips = 0;
 }
 
-int GameImpl::rows() const
+int GameImpl::rows() const  
 {
 	return m_nRows;
 }
 
-int GameImpl::cols() const
+int GameImpl::cols() const 
 {
 	return m_nCols;
 }
@@ -77,14 +77,10 @@ Point GameImpl::randomPoint() const
 
 bool GameImpl::addShip(int length, char symbol, string name)
 {
-	Ship temp;
-	if (m_length > 0)
-	{
-		m_length = length;
-	}
-	temp.length = m_length;
-	temp.symbol = symbol;
-	temp.name = name;
+	Ship temp; //make a temporary ships to push into vector
+	temp.m_length = length;
+	temp.m_symbol = symbol;
+	temp.m_name = name;
 	ships.push_back(temp);
 	m_nShips++;
 
@@ -98,81 +94,30 @@ int GameImpl::nShips() const
 
 int GameImpl::shipLength(int shipId) const
 {
-	return ships[shipId].length;
+	return ships[shipId].m_length;
 }
 
 char GameImpl::shipSymbol(int shipId) const
 {
-	return ships[shipId].symbol;
+	return ships[shipId].m_symbol;
 }
 
 string GameImpl::shipName(int shipId) const
 {
-	return ships[shipId].name;  // This compiles but may not be correct
+	return ships[shipId].m_name; 
 }
 
 Player* GameImpl::play(Player* p1, Player* p2, Board& b1, Board& b2, bool shouldPause = true, int round = 0)
 {
-
-	if (round == 0)
-		if (!p1->placeShips(b1) || !p2->placeShips(b2))  // place ships
-			return nullptr;
-	// play game recursively, untill one of them wins
-	if (b1.allShipsDestroyed())
+	p1->placeShips(b1);
+	p2->placeShips(b2);
+	if (!p1->placeShips(b1) || !p2->placeShips(b2)) //if noth return false,  they are null
 	{
-		if (p1->isHuman())  // if human lose, display winner's board
-		{
-			cout << "You lose, the winner's board:" << endl;
-			b2.display(false);
-		}
-		return p2;
-	}
-	if (b2.allShipsDestroyed())
-	{
-		if (p2->isHuman())
-		{
-			cout << "You lose, the winner's board:" << endl;
-			b1.display(false);
-		}
-		return p1;
+		return nullptr;
 	}
 
-	// p1 attack p2
-	cout << p1->name() << "'s turn. Board for "
-		<< p2->name() << ": " << endl;
-	b2.display(p1->isHuman());  // display p2's board
-	bool shotHit, shipDestroyed;
-	int shipId;
-
-	Point p = p1->recommendAttack();
-	bool validHit = b2.attack(p, shotHit, shipDestroyed, shipId);
-	cout << p1->name();
-	if (!validHit)
-	{
-		cout << " wasted a shot at " << '(' << p.r << ',' << p.c << ")." << endl;
-	}
-	else
-	{
-		cout << " attacked " << '(' << p.r << ',' << p.c << ')' << " and ";
-		if (shotHit)
-		{
-			if (shipDestroyed)
-				cout << "destroyed the " << shipName(shipId);
-			else
-				cout << "hit something";
-		}
-		else
-		{
-			cout << "missed";
-		}
-		cout << ", resulting in: " << endl;
-		b2.display(p1->isHuman()); // display attack result
-	}
-
-	p1->recordAttackResult(p, validHit, shotHit, shipDestroyed, shipId);  // p1 records its attack result
-	if (shouldPause)
-		waitForEnter();
-	return play(p2, p1, b2, b1, shouldPause, round + 1);
+	cout << p1->name() << "'s turn.  Board for " << p2->name() << endl;
+	return nullptr;  
 }
 
 //******************** Game functions *******************************
@@ -295,4 +240,3 @@ Player* Game::play(Player* p1, Player* p2, bool shouldPause)
 	Board b2(*this);
 	return m_impl->play(p1, p2, b1, b2, shouldPause);
 }
-
