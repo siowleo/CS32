@@ -106,7 +106,7 @@ string GameImpl::shipName(int shipId) const
 {
 	return ships[shipId].m_name; 
 }
-
+//this is wrong
 Player* GameImpl::play(Player* p1, Player* p2, Board& b1, Board& b2, bool shouldPause = true, int round = 0)
 {
 	p1->placeShips(b1);
