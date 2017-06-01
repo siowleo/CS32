@@ -24,6 +24,7 @@ int main()
 	cout << "  3.  A " << NTRIALS
 		<< "-game match between a mediocre and an awful player, with no pauses"
 		<< endl;
+	// gotta add 4th choice
 	cout << "Enter your choice: ";
 	string line;
 	getline(cin, line);
