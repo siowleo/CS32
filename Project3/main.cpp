@@ -2,7 +2,7 @@
 #include "Player.h"
 #include <iostream>
 #include <string>
-
+//gotta fix the play function
 using namespace std;
 
 bool addStandardShips(Game& g)
