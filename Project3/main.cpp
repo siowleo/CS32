@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 //gotta fix the play function
+//game will not run if you use this play function
 using namespace std;
 
 bool addStandardShips(Game& g)
