@@ -2,174 +2,219 @@
 #include <string>
 #include <iostream>
 #include <cassert>
+#include <vector>
 using namespace std;
 
-const int SIZE = 100;
+const int SIZE = 20000;
 
-class hashing //creating linked list for hash table
+struct hashNode //create node for each bucket of hash table
 {
-public:
-	hashing() //intialize the hash table
-	{
-		for (int i = 0; i < SIZE; ++i)
-		{
-			table[i] = nullptr;
-		}
+	int lineNum;
+	int scope;
+	hashNode(int newLine, int newScope) 
+	{ 
+		lineNum = newLine; 
+		scope = newScope;
 	}
-	bool declare(string id, int lineNum);
-	int search(string id);
-private:
-	struct hashNode //create node for each hash table node
-	{
-		string id;
-		int lineNum;
-		hashNode* next;
-		hashNode(string newId, int newLine) //initialize the nodes
-		{
-			id = newId;
-			lineNum = newLine;
-			next = nullptr;
-		}
-	};
-
-	hashNode* table[SIZE];
 };
-
-int hashFunc(const string& id) //hash function from string to key
-{
-	unsigned int value = 0;
-	for (int i = 0; i < id.size(); i++)
-	{
-		value = value + (i + 1) * id[i];
-	}
-	value = value % SIZE;
-	return value;
-}
-
-bool hashing::declare(string id, int lineNum) //checking hash table for key values
-{
-	int key = hashFunc(id);
-	hashNode** ptr = &table[key];
-	while (*ptr != nullptr)
-	{
-		if ((*ptr)->id == id)
-		{
-			return false;
-		}
-		else
-		{
-			ptr = &((*ptr)->next);
-		}
-	}
-	*ptr = new hashNode(id, lineNum); //if bucket with value doesn't exist, make a new one
-	return true;
-}
-
-int hashing::search(string id)
-{
-	int key = hashFunc(id);
-	hashNode* ptr = table[key];
-	while (ptr != nullptr)
-	{
-		if (ptr->id == id)
-		{
-			int num = ptr->lineNum;
-			return num;
-		}
-		ptr = ptr->next;
-	}
-	return -1;
-}
 
 
 struct Node
 {
-	hashing table;
-	Node* next;
-	Node* previous;
-	Node()
+	string id;
+	vector<hashNode> Scoping; //vector of hash nodes used for scopes
+	Node* left;
+	Node* right;
+	Node** parent;
+	Node(const string& stringid, int line, int scope) //linked list in binary tree format
 	{
-		next = nullptr;
-		previous = nullptr;
+		Scoping.push_back(hashNode(line, scope));
+		id = stringid;
+		left = nullptr;
+		right = nullptr;
+		parent = nullptr;
 	}
 	~Node()
 	{
-		delete next;
+		delete left;
+		delete right;
 	}
 };
 
-// This class does the real work of the implementation.
-class SymbolTableImpl //constructor for hash table 
+class hashTable
 {
 public:
-	SymbolTableImpl()
+	hashTable() //constructor
 	{
-		head = new Node;
-		current = head;
+		for (int i = 0; i < SIZE; ++i)
+		{
+			bucket[i] = nullptr;
+		}
 	}
+	~hashTable() //destructor
+	{
+		for (int i = 0; i < SIZE; ++i)
+		{
+			delete bucket[i];
+		}
+	}
+
+	Node* declare(const string& id, const int& lineNum, int scopeNum);
+	int search(const string& id) const;
+private:
+	Node* bucket[SIZE]; //create hash table of SIZE
+};
+
+// This class does the real work of the implementation.
+class SymbolTableImpl
+{
+public:
+	SymbolTableImpl() { idV.push_back(vector<Node*>()); }
+
 	void enterScope();
 	bool exitScope();
 	bool declare(const string& id, int lineNum);
 	int find(const string& id) const;
 private:
-
-	Node* head;
-	Node* current;
+	vector<vector<Node*> > idV;
+	hashTable tableHash;
 };
 
-void SymbolTableImpl::enterScope() //traversing the linked list
+// function implementation
+///////////////////////////////////////////////////////////
+
+int hashFunc(const string& key) //string to key hash function
 {
-	current->next = new Node;
-	current->next->previous = current;
-	current = current->next; //moving on to next node
+	unsigned long long value = 0;
+	for (int i = 0; i < key.size(); ++i)
+	{
+		value = value * 101 + key[i] + 1;
+	}
+	value =  value % SIZE;
+	return value;
+}
+
+ Node* hashTable::declare(const string& id, const int& lineNum, int num)
+{
+	 int key = hashFunc(id);
+	Node** ptr = &bucket[key];  
+	while (*ptr != nullptr)
+	{
+		if ((*ptr)->id == id)  
+		{
+			if ((*ptr)->Scoping.empty() || (*ptr)->Scoping.back().scope != num)
+			{
+				(*ptr)->Scoping.push_back(hashNode(lineNum, num)); //push node fir the last value of vector
+				return *ptr;
+			}
+			else
+			{
+				return nullptr;
+			}
+		}
+		ptr = (id < (*ptr)->id) ? &((*ptr)->left) : &((*ptr)->right);
+	}
+	*ptr = new Node(id, lineNum, num);
+	(*ptr)->parent = ptr;
+	return *ptr;
+}
+
+int hashTable::search(const string& id) const
+{
+	int key = hashFunc(id);
+	Node* ptr = bucket[key];
+	while (ptr != nullptr)
+	{
+		if (ptr->id == id)
+		{
+			return (ptr->Scoping.empty()) ? -1 : ptr->Scoping.back().lineNum;
+		}
+		ptr = (id < ptr->id) ? ptr->left : ptr->right; //decide which direction of linked list to go
+	}
+	return -1;
+}
+
+ void SymbolTableImpl::enterScope()
+{
+	idV.push_back(vector<Node*>()); //when enterin scope, push vector value with vector of nodes
 }
 
 bool SymbolTableImpl::exitScope()
-{ //exit scope by going to previous node
-	if (current == nullptr)
+{ //binary tree
+	if (idV.size() <= 1)
 	{
 		return false;
 	}
-	else if (current->previous == nullptr)
-	{
-		return false;
-	}
-	else
-	{
-		current = current->previous;
-		delete current->next;
-		current->next = nullptr;
+		vector<Node*>& current = idV.back(); //set current node to back of vector
+		int len = current.size();
+		for (int i = 0; i < len; ++i)
+		{
+			current[i]->Scoping.pop_back();
+			if (current[i]->Scoping.empty()) //if empty
+			{
+				Node* currNode = current[i]->left;
+				if (currNode == nullptr)
+				{
+					currNode = current[i];
+					if (currNode->right != nullptr)
+					{
+						currNode->right->parent = currNode->parent;
+					}
+					*(current[i]->parent) = current[i]->right;
+				}
+				else
+				{
+					while (currNode->right != nullptr)
+					{
+						currNode = currNode->right;
+					}
+					if (currNode->left != nullptr)
+					{
+						currNode->left->parent = currNode->parent;
+					}
+					*(currNode->parent) = currNode->left; 
+					*(current[i]->parent) = currNode;
+					currNode->left = current[i]->left; currNode->right = current[i]->right;
+					if (current[i]->left != nullptr)
+					{
+						current[i]->left->parent = &(currNode->left);
+					}
+					if (current[i]->right != nullptr)
+					{
+						current[i]->right->parent = &(currNode->right);
+					}
+				}
+				current[i]->left = current[i]->right = nullptr;
+				*(current[i]->parent) = nullptr;
+				delete current[i];
+			}
+		}
+		idV.pop_back();
 		return true;
-	}
-
 	return false;
 }
 
-inline bool SymbolTableImpl::declare(const string& id, int lineNum)
+bool SymbolTableImpl::declare(const string& id, int lineNum)
 {
-	bool result; //declare using the hashnode function
-	result = current->table.declare(id, lineNum);
-	return result;
-}
-
-int SymbolTableImpl::find(const string& id) const
-{
-	if (current == nullptr)
+	//use hashTable functions 
+	Node* final = tableHash.declare(id, lineNum, idV.size());
+	if (final == nullptr) //cannot be point to nullptr
 	{
 		return false;
 	}
-	Node* ptr;
-	ptr = current;
-	int num = ptr->table.search(id);
-	while (ptr->previous != nullptr && num == -1)//search for node with existing id
+	else 
 	{
-		ptr = ptr->previous; //traverse backwards
-		num = ptr->table.search(id);
-
+		idV.back().push_back(final);
+		return true;
 	}
-	return num;
+	return false;
 }
-
+int SymbolTableImpl::find(const string& id) const
+{
+	//search function for hash table
+	int find =  tableHash.search(id);
+	return find;
+}
 //*********** SymbolTable functions **************
 
 // For the most part, these functions simply delegate to SymbolTableImpl's
